@@ -42,6 +42,8 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-
 ps4_pkg/*
+!ps4_pkg/.gitkeep
 .idea/
+log/
+go.sum

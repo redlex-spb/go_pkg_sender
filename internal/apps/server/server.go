@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,12 +22,11 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP Server
-func NewServer(port string, h http.Handler, l *log.Logger) *Server {
+func NewServer(port string, h http.Handler) *Server {
 	return &Server{
 		server: &http.Server{
 			Addr:           ":" + port,
-			Handler:        h, // pass in mux/router
-			ErrorLog:       l,
+			Handler:        h,
 			ReadTimeout:    5 * time.Second,
 			WriteTimeout:   10 * time.Second,
 			IdleTimeout:    30 * time.Second,
@@ -52,7 +51,7 @@ func (s *Server) Run() error {
 	go func() {
 		<-quit
 		fmt.Println("")
-		s.server.ErrorLog.Printf("%s - Shutdown signal received...\n", hostname)
+		log.Printf("%s - Shutdown signal received...\n", hostname)
 		atomic.StoreInt32(&healthy, 0)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -60,18 +59,18 @@ func (s *Server) Run() error {
 
 		s.server.SetKeepAlivesEnabled(false)
 		if err := s.server.Shutdown(ctx); err != nil {
-			s.server.ErrorLog.Fatalf("Could not gracefully shutdown the server: %v\n", err)
+			log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
 		}
 		close(done)
 	}()
 
-	s.server.ErrorLog.Printf("%s - Starting server on port %v", hostname, s.server.Addr)
+	log.Printf("%s - Starting server on port %v", hostname, s.server.Addr)
 	atomic.StoreInt32(&healthy, 1)
 	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		s.server.ErrorLog.Fatalf("Could not listen on %s: %v\n", s.server.Addr, err)
+		log.Fatalf("Could not listen on %s: %v\n", s.server.Addr, err)
 	}
 
 	<-done
-	s.server.ErrorLog.Printf("%s - Server gracefully stopped.\n", hostname)
+	log.Printf("%s - Server gracefully stopped.\n", hostname)
 	return nil
 }
